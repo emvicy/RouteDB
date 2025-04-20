@@ -1,0 +1,8 @@
+{
+  "config": {
+    "autoloader-suffix": "RouteDB"
+  },
+  "require": {
+    "opis/closure": "^4.3"
+  }
+}
