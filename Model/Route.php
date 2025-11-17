@@ -223,7 +223,7 @@ class Route extends _ConcreteRoute
                     $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create($oDTRoute->getPropertyArray())
                         ->set_iSlashes(count(explode('/', $oDTRoute->get_path()))-1)
                         ->set_uuid(Strings::uuid4())
-                        ->set_methodsAssigned(Convert::unserialize($oDTRoute->get_methodsAssigned()))
+                        ->set_methodsAssigned(Convert::serialize($oDTRoute->get_methodsAssigned()))
                         ->set_additional(Convert::serialize($oDTRoute->get_additional()))
                         ->set_stampCreate(date('Y-m-d H:i:s'))
                         ->set_stampChange(date('Y-m-d H:i:s'))
