@@ -11,9 +11,7 @@ vendor
 **/*.sh
 _gitPull.sh
 _gitPush.sh
-_gitPush.sh.example
 _phanlistcreate.sh
 composer.lock
-Changelog.md
 **/*.min.css
 **/*.min.js

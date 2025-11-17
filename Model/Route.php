@@ -2,9 +2,11 @@
 
 namespace RouteDB\Model;
 
+use MVC\Convert;
 use MVC\DataType\DTDBWhere;
 use MVC\DataType\DTDBWhereRelation;
 use MVC\Lock;
+use MVC\Log;
 use RouteDB\DataType\DTRouteDBModelDBTableRoute;
 use Emvicy\Emvicy;
 use RouteDB\Model\DB\Collection\DB;
@@ -15,7 +17,6 @@ use MVC\Event;
 use MVC\Registry;
 use MVC\Request;
 use MVC\Strings;
-use function Opis\Closure\{serialize, unserialize};
 
 /**
  * Route
@@ -28,7 +29,10 @@ class Route extends _ConcreteRoute
      */
     public static function init() : void
     {
+        Log::write(__METHOD__, __CLASS__ . '.log');
+
         // auto create and import from Route if no data in db table exists
+        // checks on existance of `.imported` in RouteDB folder
         if (false === self::isImported())
         {
             \MVC\_ConcreteRoute::init();
@@ -57,7 +61,10 @@ class Route extends _ConcreteRoute
      */
     protected static function setImported()
     {
-        return file_put_contents(\RouteDB\Model\Route::getdataImportedIntoTableFileAbs(), date('Y-m-d H:i:s'));
+        return file_put_contents(
+            \RouteDB\Model\Route::getdataImportedIntoTableFileAbs(),
+            date('Y-m-d H:i:s')
+        );
     }
 
     /**
@@ -115,7 +122,7 @@ class Route extends _ConcreteRoute
         \MVC\Route::{$sRequestMethod}(
             sPath: $oDTRouteDBModelDBTableRoute->get_path(),
             sClassMethod: $oDTRouteDBModelDBTableRoute->get_query(),
-            mOptional: (false === empty($oDTRouteDBModelDBTableRoute->get_additional())) ? unserialize($oDTRouteDBModelDBTableRoute->get_additional()) : null,
+            mOptional: (false === empty($oDTRouteDBModelDBTableRoute->get_additional())) ? Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()) : null,
             sTag: (false === empty($oDTRouteDBModelDBTableRoute->get_tag())) ? $oDTRouteDBModelDBTableRoute->get_tag() : '',
         );
         Registry::set($sRegistryKey, self::$aMethodRoute[$sRequestMethod][$oDTRouteDBModelDBTableRoute->get_path()]);
@@ -130,9 +137,14 @@ class Route extends _ConcreteRoute
      */
     public static function handleFallback(bool $bCacheAtRuntime = true): DTRoute
     {
+        self::init();
+
+        Log::write(__LINE__, __CLASS__ . '.log');
+
         // not ready yet, call default
         if (false === \RouteDB\Model\Route::isImported())
         {
+            Log::write(__LINE__, __CLASS__ . '.log');
             return \MVC\_ConcreteRoute::handleFallback();
         }
 
@@ -141,15 +153,22 @@ class Route extends _ConcreteRoute
         // only once at runtime
         if (true === $bCacheAtRuntime && true === Registry::isRegistered(__METHOD__))
         {
+            Log::write(__LINE__, __CLASS__ . '.log');
             return Registry::get(__METHOD__);
         }
 
+        Log::write(Config::get_MVC_ROUTING_FALLBACK(), __CLASS__ . '.log');
+
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnQuery(Config::get_MVC_ROUTING_FALLBACK());
+        Log::write($oDTRouteDBModelDBTableRoute, __CLASS__ . '.log');
+
         $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
-            ->set_methodsAssigned(unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
-            ->set_additional(unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
+            ->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
+            ->set_additional(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
         ;
         Registry::set(__METHOD__, $oDTRoute);
+
+        Log::write(__LINE__, __CLASS__ . '.log');
 
         return $oDTRoute;
     }
@@ -160,12 +179,16 @@ class Route extends _ConcreteRoute
      */
     protected static function autoImportIntoDatabase()
     {
+        Log::write(__LINE__, __CLASS__ . '.log');
+
         // run after application is done
         Event::bind('mvc.application.destruct.before', function(){
 
             // auto create and import from Route if no data in db table exists
             if (false === \RouteDB\Model\Route::isImported())
             {
+                Log::write(__LINE__, __CLASS__ . '.log');
+
                 // only once at runtime
                 if (true == Registry::isRegistered(__METHOD__))
                 {
@@ -200,8 +223,8 @@ class Route extends _ConcreteRoute
                     $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create($oDTRoute->getPropertyArray())
                         ->set_iSlashes(count(explode('/', $oDTRoute->get_path()))-1)
                         ->set_uuid(Strings::uuid4())
-                        ->set_methodsAssigned(serialize($oDTRoute->get_methodsAssigned()))
-                        ->set_additional(serialize($oDTRoute->get_additional()))
+                        ->set_methodsAssigned(Convert::unserialize($oDTRoute->get_methodsAssigned()))
+                        ->set_additional(Convert::serialize($oDTRoute->get_additional()))
                         ->set_stampCreate(date('Y-m-d H:i:s'))
                         ->set_stampChange(date('Y-m-d H:i:s'))
                     ;
@@ -251,8 +274,8 @@ class Route extends _ConcreteRoute
         else
         {
             $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
-                ->set_methodsAssigned(unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
-                ->set_additional(unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
+                ->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
+                ->set_additional(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
             ;
         }
 
@@ -276,6 +299,126 @@ class Route extends _ConcreteRoute
     {
         return DB::use()->oRouteDBModelDBTableRoute->getTagList();
     }
+
+    /**
+     * @param bool $bCacheAtRuntime
+     * @return array
+     * @throws \ReflectionException
+     */
+    public static function getRouteArray(bool $bCacheAtRuntime = true): array
+    {
+        if (true === $bCacheAtRuntime)
+        {
+            if (true === Registry::isRegistered(__METHOD__))
+            {
+                return Registry::get(__METHOD__);
+            }
+        }
+
+        Log::write(__METHOD__, __CLASS__ . '.log');
+
+        /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
+        $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();
+        $aDTRoute = array();
+
+        foreach ($aDTRouteDBModelDBTableRoute as $oDTRouteDBModelDBTableRoute)
+        {
+            $aDTRoute[$oDTRouteDBModelDBTableRoute->get_path()] = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()));
+        }
+
+        if (true === $bCacheAtRuntime)
+        {
+            Registry::set(__METHOD__, $aDTRoute);
+        }
+
+        return $aDTRoute;
+    }
+
+    /**
+     * @param bool $bCacheAtRuntime
+     * @return array
+     * @throws \ReflectionException
+     */
+    public static function getMethodArray(bool $bCacheAtRuntime = true): array
+    {
+        if (true === $bCacheAtRuntime)
+        {
+            if (true === Registry::isRegistered(__METHOD__))
+            {
+                return Registry::get(__METHOD__);
+            }
+        }
+
+        Log::write(__METHOD__, __CLASS__ . '.log');
+
+        /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
+        $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();
+        $aDTRoute = array();
+
+        foreach ($aDTRouteDBModelDBTableRoute as $oDTRouteDBModelDBTableRoute)
+        {
+            $oDTRouteDBModelDBTableRoute->set_requestMethod(strtolower($oDTRouteDBModelDBTableRoute->get_requestMethod()));
+
+            (false === isset($aDTRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()]))
+                ? $aDTRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()] = array()
+                : false
+            ;
+
+            if (
+                true === isset($aDTRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()]) &&
+                false === in_array($oDTRouteDBModelDBTableRoute->get_path(), $aDTRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()])
+            )
+            {
+                $aDTRoute[strtolower($oDTRouteDBModelDBTableRoute->get_requestMethod())][] = $oDTRouteDBModelDBTableRoute->get_path();
+            }
+        }
+
+        if (true === $bCacheAtRuntime)
+        {
+            Registry::set(__METHOD__, $aDTRoute);
+        }
+
+        return $aDTRoute;
+    }
+
+    /**
+     * @param bool $bCacheAtRuntime
+     * @return array
+     * @throws \ReflectionException
+     */
+    public static function getMethodRouteArray(bool $bCacheAtRuntime = true): array
+    {
+        if (true === $bCacheAtRuntime)
+        {
+            if (true === Registry::isRegistered(__METHOD__))
+            {
+                return Registry::get(__METHOD__);
+            }
+        }
+
+        Log::write(__METHOD__, __CLASS__ . '.log');
+
+        /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
+        $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();
+        $aDTRoute = array();
+
+        foreach ($aDTRouteDBModelDBTableRoute as $oDTRouteDBModelDBTableRoute)
+        {
+            $aDTRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()][$oDTRouteDBModelDBTableRoute->get_path()] = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()));
+        }
+
+        if (true === $bCacheAtRuntime)
+        {
+            Registry::set(__METHOD__, $aDTRoute);
+        }
+
+        return $aDTRoute;
+    }
+
+    /*
+     * Es folgen Methoden, welche noch nicht umgesetzt sind.
+     * Es werden dann die Methoden verwendet von: \MVC\_ConcreteRoute
+     */
 
 //    public static function any(string $sPath = '', string $sClassMethod = '', mixed $mOptional = '', string $sTag = ''): void
 //    {
@@ -316,7 +459,7 @@ class Route extends _ConcreteRoute
 //    {
 //        // TODO: Implement delete() method.
 //    }
-
+//
 //    public static function add(string $sRequestMethod = '*', string $sPath = '', string $sClassMethod = '', mixed $mOptional = null, string $sTag = ''): void
 //    {
 //        // TODO: Implement add() method.
@@ -335,7 +478,7 @@ class Route extends _ConcreteRoute
 //    {
 //        // TODO: Implement getPathOnPlaceholderIndex() method.
 //    }
-
+//
 //    public static function setPathParam(array $aPathParam = array()): void
 //    {
 //        // TODO: Implement setPathParam() method.
