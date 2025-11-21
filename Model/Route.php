@@ -5,6 +5,7 @@ namespace RouteDB\Model;
 use MVC\Convert;
 use MVC\DataType\DTDBWhere;
 use MVC\DataType\DTDBWhereRelation;
+use MVC\DataType\DTRoutingAdditional;
 use MVC\Lock;
 use MVC\Log;
 use RouteDB\DataType\DTRouteDBModelDBTableRoute;
@@ -273,9 +274,20 @@ class Route extends _ConcreteRoute
         }
         else
         {
-            $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
-                ->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
-                ->set_additional(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
+            $aDTRoute = array_intersect_key(
+                $oDTRouteDBModelDBTableRoute->getPropertyArray(),
+                DTRoute::create()->getPropertyArray()
+            );
+
+            $oDTRoutingAdditional = Convert::unserialize($aDTRoute['additional']);
+            $aMethodsAssigned = Convert::unserialize($aDTRoute['methodsAssigned']);
+
+            $aDTRoute['additional'] = [];
+            $aDTRoute['methodsAssigned'] = [];
+
+            $oDTRoute = DTRoute::create($aDTRoute)
+                ->set_methodsAssigned($aMethodsAssigned)
+                ->set_additional($oDTRoutingAdditional)
             ;
         }
 
