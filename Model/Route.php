@@ -51,7 +51,7 @@ class Route extends _ConcreteRoute
     /**
      * @return bool
      */
-    protected static function isImported() : bool
+    public static function isImported() : bool
     {
         return file_exists(\RouteDB\Model\Route::getdataImportedIntoTableFileAbs());
     }
