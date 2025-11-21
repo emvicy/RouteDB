@@ -5,6 +5,7 @@
 .trash
 .test
 .env
+.imported
 *.tar.gz
 vendor
 *.sh
