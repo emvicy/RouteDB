@@ -31,3 +31,28 @@ _set Route Class in your config_
  */
 $aConfig['MVC_ROUTE_CLASS'] = '\RouteDB\Model\Route';
 ~~~
+
+## Usage
+
+**auto-import routes** 
+
+Once the Route Class is set in your config, all routes are automatically  
+imported once to the database table `RouteDBModelDBTableRoute` on any next request.      
+
+**resolving**
+
+From the moment all routes are imported, all further requests will be resolved by that database table.
+
+**force import** 
+
+if you want to force an import of your current routes settings you can do this by calling the import command on cli:
+
+~~~bash
+php emvicy routes:dbimport
+~~~
+or, shorthand
+~~~bash
+php emvicy rtdbi
+~~~
+
+
