@@ -1,7 +1,9 @@
 
 # RouteDB
 
-a Routing via Database Module for Emvicy2 (2.x) PHP Framework: https://github.com/emvicy/Emvicy/tree/2.x
+a Routing via Database Module for Emvicy PHP Framework
+- [Emvicy2 (2.x)](#https://github.com/emvicy/Emvicy/tree/2.x) ✅
+- [Emvicy3 (3.x)](#https://github.com/emvicy/Emvicy/tree/3.x) ✅
 
 ---
 
