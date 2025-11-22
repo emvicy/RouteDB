@@ -195,7 +195,7 @@ class DTRouteDBModelDBTableRoute extends \MVC\DB\DataType\DB\TableDataType
 	}
 
 	/**
-	 * @param string $mValue 
+	 * @param string $mValue
 	 * @return $this
 	 * @throws \ReflectionException
 	 */

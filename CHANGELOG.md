@@ -19,6 +19,12 @@
 
 ### Backlog
 
+**bug**
+
+- `\RouteDB\DataType\DTRouteDBModelDBTableRoute`: here property `methodsAssigned` values has type string|array 
+
+
+
 ### In Progress
 
 **added**

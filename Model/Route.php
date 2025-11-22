@@ -6,6 +6,7 @@ use MVC\Convert;
 use MVC\DataType\DTDBWhere;
 use MVC\DataType\DTDBWhereRelation;
 use MVC\DataType\DTRoutingAdditional;
+use MVC\File;
 use MVC\Lock;
 use MVC\Log;
 use RouteDB\DataType\DTRouteDBModelDBTableRoute;
@@ -25,19 +26,37 @@ use MVC\Strings;
 class Route extends _ConcreteRoute
 {
     /**
+     * @param bool $bForceImport
      * @return void
      * @throws \ReflectionException
      */
-    public static function init() : void
+    public static function init(bool $bForceImport = false) : void
     {
         Log::write(__METHOD__, __CLASS__ . '.log');
 
-        // auto create and import from Route if no data in db table exists
-        // checks on existance of `.imported` in RouteDB folder
+        if (true == $bForceImport)
+        {
+            self::removeImported();
+        }
+
+        // auto create and import from Route
+        // checks on existence of `.imported` in RouteDB folder
         if (false === self::isImported())
         {
             \MVC\_ConcreteRoute::init();
-            \RouteDB\Model\Route::autoImportIntoDatabase();
+
+            // immediately import
+            if (true === $bForceImport)
+            {
+                \RouteDB\Model\Route::autoImportIntoDatabase();
+            }
+            // wait for application to be ended
+            else
+            {
+                Event::bind('mvc.application.destruct.before', function(){
+                    \RouteDB\Model\Route::autoImportIntoDatabase();
+                });
+            }
         }
     }
 
@@ -66,6 +85,21 @@ class Route extends _ConcreteRoute
             \RouteDB\Model\Route::getdataImportedIntoTableFileAbs(),
             date('Y-m-d H:i:s')
         );
+    }
+
+    /**
+     * @return bool
+     */
+    protected static function removeImported()
+    {
+        $sFile = \RouteDB\Model\Route::getdataImportedIntoTableFileAbs();
+
+        if (true == file_exists($sFile))
+        {
+            unlink ($sFile);
+        }
+
+        return false;
     }
 
     /**
@@ -175,66 +209,64 @@ class Route extends _ConcreteRoute
     }
 
     /**
-     * @return bool
+     * @return void
      * @throws \ReflectionException
      */
     protected static function autoImportIntoDatabase()
     {
         Log::write(__LINE__, __CLASS__ . '.log');
 
-        // run after application is done
-        Event::bind('mvc.application.destruct.before', function(){
+        // auto create and import from Route
+        if (false === \RouteDB\Model\Route::isImported())
+        {
+            Log::write(__LINE__, __CLASS__ . '.log');
 
-            // auto create and import from Route if no data in db table exists
-            if (false === \RouteDB\Model\Route::isImported())
+            // only once at runtime
+            if (true == Registry::isRegistered(__METHOD__))
             {
-                Log::write(__LINE__, __CLASS__ . '.log');
-
-                // only once at runtime
-                if (true == Registry::isRegistered(__METHOD__))
-                {
-                    return;
-                }
-
-                Registry::set(__METHOD__, true);
-                Lock::create(__FUNCTION__);
-
-                // make sure there are no implications due to importing data into table
-                Event::delete();
-                Emvicy::clearcache();
-
-                // empty table if there were already data before
-                if (DB::use()->oRouteDBModelDBTableRoute->count() > 0)
-                {
-                    DB::use()->oRouteDBModelDBTableRoute->delete([
-                        DTDBWhere::create()
-                            ->set_sKey(DTRouteDBModelDBTableRoute::getPropertyName_id())
-                            ->set_sRelation(DTDBWhereRelation::greaterThan)
-                            ->set_sValue(0)
-                    ]);
-                }
-
-                /**
-                 * @var string       $sPath
-                 * @var DTRoute $oDTRoute
-                 */
-                foreach (\MVC\Route::$aRoute as $sPath => $oDTRoute)
-                {
-                    // create
-                    $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create($oDTRoute->getPropertyArray())
-                        ->set_iSlashes(count(explode('/', $oDTRoute->get_path()))-1)
-                        ->set_uuid(Strings::uuid4())
-                        ->set_methodsAssigned(Convert::serialize($oDTRoute->get_methodsAssigned()))
-                        ->set_additional(Convert::serialize($oDTRoute->get_additional()))
-                        ->set_stampCreate(date('Y-m-d H:i:s'))
-                        ->set_stampChange(date('Y-m-d H:i:s'))
-                    ;
-                    DB::use()->oRouteDBModelDBTableRoute->create($oDTRouteDBModelDBTableRoute);
-                }
-
-                \RouteDB\Model\Route::setImported();
+                return;
             }
-        });
+
+            Registry::set(__METHOD__, true);
+            Lock::create(__FUNCTION__);
+
+            // make sure there are no implications due to importing data into table
+            Event::delete();
+            Emvicy::clearcache();
+
+            // empty table if there were already data before
+            if (DB::use()->oRouteDBModelDBTableRoute->count() > 0)
+            {
+                DB::use()->oRouteDBModelDBTableRoute->delete([
+                    DTDBWhere::create()
+                        ->set_sKey(DTRouteDBModelDBTableRoute::getPropertyName_id())
+                        ->set_sRelation(DTDBWhereRelation::greaterThan)
+                        ->set_sValue(0)
+                ]);
+            }
+
+            /**
+             * @var string       $sPath
+             * @var DTRoute $oDTRoute
+             */
+            foreach (\MVC\Route::$aRoute as $sPath => $oDTRoute)
+            {
+                $aProperty = $oDTRoute->getPropertyArray();
+                $aProperty['methodsAssigned'] = Convert::serialize($oDTRoute->get_methodsAssigned()); # must be string
+                $aProperty['additional'] = Convert::serialize($oDTRoute->get_additional()); # must be string
+
+                // create
+                $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create($aProperty)
+                    ->set_iSlashes(count(explode('/', $oDTRoute->get_path()))-1)
+                    ->set_uuid(Strings::uuid4())
+                    ->set_stampCreate(date('Y-m-d H:i:s'))
+                    ->set_stampChange(date('Y-m-d H:i:s'))
+                ;
+                DB::use()->oRouteDBModelDBTableRoute->create($oDTRouteDBModelDBTableRoute);
+            }
+
+            \RouteDB\Model\Route::setImported();
+        }
     }
 
     /**
