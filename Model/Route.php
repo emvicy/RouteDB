@@ -5,10 +5,8 @@ namespace RouteDB\Model;
 use MVC\Convert;
 use MVC\DataType\DTDBWhere;
 use MVC\DataType\DTDBWhereRelation;
-use MVC\DataType\DTRoutingAdditional;
-use MVC\File;
+use MVC\DataType\DTValue;
 use MVC\Lock;
-use MVC\Log;
 use RouteDB\DataType\DTRouteDBModelDBTableRoute;
 use Emvicy\Emvicy;
 use RouteDB\Model\DB\Collection\DB;
@@ -32,7 +30,8 @@ class Route extends _ConcreteRoute
      */
     public static function init(bool $bForceImport = false) : void
     {
-        Log::write(__METHOD__, __CLASS__ . '.log');
+        $oDTValue = DTValue::create()->set_mValue($bForceImport);
+        Event::run('routedb.model.route.init.before', $oDTValue);
 
         if (true == $bForceImport)
         {
@@ -58,18 +57,25 @@ class Route extends _ConcreteRoute
                 });
             }
         }
+
+        Event::run('routedb.model.route.init.after', $oDTValue);
     }
 
     /**
-     * @return void
+     * @return mixed|null
+     * @throws \ReflectionException
      */
     protected static function getdataImportedIntoTableFileAbs()
     {
-        return realpath(__DIR__ . '/../') . '/.imported';
+        $oDTValue = DTValue::create()->set_mValue(realpath(__DIR__ . '/../') . '/.imported');
+        Event::run('routedb.model.route.getdataImportedIntoTableFileAbs', $oDTValue);
+
+        return $oDTValue->get_mValue();
     }
 
     /**
      * @return bool
+     * @throws \ReflectionException
      */
     public static function isImported() : bool
     {
@@ -78,28 +84,42 @@ class Route extends _ConcreteRoute
 
     /**
      * @return false|int
+     * @throws \ReflectionException
      */
     protected static function setImported()
     {
-        return file_put_contents(
+        Event::run('routedb.model.route.setImported.before');
+
+        $bPut = file_put_contents(
             \RouteDB\Model\Route::getdataImportedIntoTableFileAbs(),
             date('Y-m-d H:i:s')
         );
+
+        Event::run('routedb.model.route.setImported.after', $bPut);
+
+        return $bPut;
     }
 
     /**
      * @return bool
+     * @throws \ReflectionException
      */
     protected static function removeImported()
     {
+        $bUnlink = false;
         $sFile = \RouteDB\Model\Route::getdataImportedIntoTableFileAbs();
+
+        $oDTValue = DTValue::create()->set_mValue($sFile);
+        Event::run('routedb.model.route.removeImported.before', $oDTValue);
 
         if (true == file_exists($sFile))
         {
-            unlink ($sFile);
+            $bUnlink = unlink ($sFile);
         }
 
-        return false;
+        Event::run('routedb.model.route.removeImported.after', $bUnlink);
+
+        return $bUnlink;
     }
 
     /**
@@ -109,6 +129,9 @@ class Route extends _ConcreteRoute
      */
     public static function getCurrent(bool $bCacheAtRuntime = true) : DTRoute
     {
+        $oDTValue = DTValue::create()->set_mValue($bCacheAtRuntime);
+        Event::run('routedb.model.route.getCurrent.before', $oDTValue);
+
         // Request
         $sRequestMethod = Request::in()->get_requestMethod();
         $sPath = Request::in()->get_path();
@@ -117,29 +140,43 @@ class Route extends _ConcreteRoute
         // only once at runtime
         if (true === $bCacheAtRuntime && true === Registry::isRegistered($sRegistryKey))
         {
-            return Registry::get($sRegistryKey);
+            $oDTRouteDBModelDBTableRoute = Registry::get($sRegistryKey);
+            Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
+
+            return $oDTRouteDBModelDBTableRoute;
         }
 
         // Path 1:1 Match; e.g: /RouteDB/bar/
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodPath($sRequestMethod, $sPath);
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
-            return self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
+
+            return $oDTRouteDBModelDBTableRoute;
         }
 
         // Path 1:1 + Wildcard (/*) Match; e.g: /RouteDB/bar/*
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodWildcardPath($sRequestMethod, $sPath . '*');
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
-            return self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
+
+            return $oDTRouteDBModelDBTableRoute;
         }
 
         // Path Placeholder Match (concrete + Wildcard (/*)); e.g: /RouteDB/bar/:id/:name/ + /RouteDB/bar/:id/:name/*
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodPlaceholderPath($sRequestMethod, $sPath);
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
-            return self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
+            Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
+
+            return $oDTRouteDBModelDBTableRoute;
         }
+
+        Event::run('routedb.model.route.getCurrent.after', DTRouteDBModelDBTableRoute::create());
 
         return self::handleFallback();
     }
@@ -154,13 +191,18 @@ class Route extends _ConcreteRoute
      */
     private static function setRoute(string $sRegistryKey, string $sRequestMethod, string $sPath, DTRouteDBModelDBTableRoute $oDTRouteDBModelDBTableRoute)
     {
+        Event::run('routedb.model.route.setRoute.before', $oDTRouteDBModelDBTableRoute);
+
         \MVC\Route::{$sRequestMethod}(
             sPath: $oDTRouteDBModelDBTableRoute->get_path(),
             sClassMethod: $oDTRouteDBModelDBTableRoute->get_query(),
             mOptional: (false === empty($oDTRouteDBModelDBTableRoute->get_additional())) ? Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()) : null,
             sTag: (false === empty($oDTRouteDBModelDBTableRoute->get_tag())) ? $oDTRouteDBModelDBTableRoute->get_tag() : '',
         );
-        Registry::set($sRegistryKey, self::$aMethodRoute[$sRequestMethod][$oDTRouteDBModelDBTableRoute->get_path()]);
+        Registry::set(
+            $sRegistryKey,
+            self::$aMethodRoute[$sRequestMethod][$oDTRouteDBModelDBTableRoute->get_path()]
+        );
 
         return self::$aMethodRoute[$sRequestMethod][$oDTRouteDBModelDBTableRoute->get_path()];
     }
@@ -174,12 +216,9 @@ class Route extends _ConcreteRoute
     {
         self::init();
 
-        Log::write(__LINE__, __CLASS__ . '.log');
-
         // not ready yet, call default
         if (false === \RouteDB\Model\Route::isImported())
         {
-            Log::write(__LINE__, __CLASS__ . '.log');
             return \MVC\_ConcreteRoute::handleFallback();
         }
 
@@ -188,22 +227,17 @@ class Route extends _ConcreteRoute
         // only once at runtime
         if (true === $bCacheAtRuntime && true === Registry::isRegistered(__METHOD__))
         {
-            Log::write(__LINE__, __CLASS__ . '.log');
             return Registry::get(__METHOD__);
         }
 
-        Log::write(Config::get_MVC_ROUTING_FALLBACK(), __CLASS__ . '.log');
-
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnQuery(Config::get_MVC_ROUTING_FALLBACK());
-        Log::write($oDTRouteDBModelDBTableRoute, __CLASS__ . '.log');
-
         $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
             ->set_methodsAssigned(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
             ->set_additional(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
         ;
-        Registry::set(__METHOD__, $oDTRoute);
 
-        Log::write(__LINE__, __CLASS__ . '.log');
+        Event::run('routedb.model.route.handleFallback.after', $oDTRoute);
+        Registry::set(__METHOD__, $oDTRoute);
 
         return $oDTRoute;
     }
@@ -214,13 +248,9 @@ class Route extends _ConcreteRoute
      */
     protected static function autoImportIntoDatabase()
     {
-        Log::write(__LINE__, __CLASS__ . '.log');
-
         // auto create and import from Route
         if (false === \RouteDB\Model\Route::isImported())
         {
-            Log::write(__LINE__, __CLASS__ . '.log');
-
             // only once at runtime
             if (true == Registry::isRegistered(__METHOD__))
             {
@@ -229,9 +259,6 @@ class Route extends _ConcreteRoute
 
             Registry::set(__METHOD__, true);
             Lock::create(__FUNCTION__);
-
-            // make sure there are no implications due to importing data into table
-            Event::delete();
             Emvicy::clearcache();
 
             // empty table if there were already data before
@@ -359,8 +386,6 @@ class Route extends _ConcreteRoute
             }
         }
 
-        Log::write(__METHOD__, __CLASS__ . '.log');
-
         /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
         $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();
         $aDTRoute = array();
@@ -392,8 +417,6 @@ class Route extends _ConcreteRoute
                 return Registry::get(__METHOD__);
             }
         }
-
-        Log::write(__METHOD__, __CLASS__ . '.log');
 
         /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
         $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();
@@ -439,8 +462,6 @@ class Route extends _ConcreteRoute
                 return Registry::get(__METHOD__);
             }
         }
-
-        Log::write(__METHOD__, __CLASS__ . '.log');
 
         /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
         $aDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->retrieve();

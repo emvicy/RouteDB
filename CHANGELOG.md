@@ -21,13 +21,13 @@
 
 **bug**
 
-- `\RouteDB\DataType\DTRouteDBModelDBTableRoute`: here property `methodsAssigned` values has type string|array 
-
-
-
 ### In Progress
 
 **added**
+
+- command for emvicy console: `php emvicy routes:dbimport`|`php emvicy rtdbi` => imports Route config into database table `RouteDBModelDBTableRoute` for new.
+- Events
+
 **changed**
 **deprecated**
 **removed**  

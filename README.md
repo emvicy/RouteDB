@@ -41,6 +41,8 @@ $aConfig['MVC_ROUTE_CLASS'] = '\RouteDB\Model\Route';
 Once the Route Class is set in your config, all routes are automatically  
 imported once to the database table `RouteDBModelDBTableRoute` on any next request.      
 
+
+
 **resolving**
 
 From the moment all routes are imported, all further requests will be resolved by that database table.
@@ -56,5 +58,88 @@ or, shorthand
 ~~~bash
 php emvicy rtdbi
 ~~~
+
+---
+
+## Events
+
+~~~php
+Event::run('routedb.model.route.init.before', $oDTValue);
+~~~
+- `$oDTValue->get_mValue()`: `bool $bForceImport`: force an import true|false
+
+~~~php
+Event::run('routedb.model.route.init.after', $oDTValue);
+~~~
+- `$oDTValue->get_mValue()`: `bool $bForceImport`: force an import true|false
+
+~~~php
+Event::run('routedb.model.route.setImported.before');
+~~~
+
+~~~php
+Event::run('routedb.model.route.setImported.after', (bool) $bPut);
+~~~
+- `bool $bPut`: import success true|false
+
+~~~php
+Event::run('routedb.model.route.removeImported.before', $oDTValue);
+~~~
+- `$oDTValue->get_mValue()`: `string $sFile`: `modules/RouteDB/.imported`
+
+~~~php
+Event::run('routedb.model.route.removeImported.after', $bUnlink);
+~~~
+- `bool $bUnlink`: unlink import file success true|false
+
+~~~php
+Event::run('routedb.model.route.getdataImportedIntoTableFileAbs', $oDTValue);
+~~~
+- `$oDTValue->get_mValue()`: `string $sFile`: `modules/RouteDB/.imported`
+
+~~~php
+Event::run('routedb.model.route.getCurrent.before', $oDTValue);
+~~~
+- `$oDTValue->get_mValue()`: `bool $bCacheAtRuntime`: true|false
+
+~~~php
+Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
+~~~
+
+~~~php
+Event::run('routedb.model.route.setRoute.before', $oDTRouteDBModelDBTableRoute);
+~~~
+
+~~~php
+Event::run('routedb.model.route.handleFallback.after', $oDTRoute);
+~~~
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
