@@ -19,13 +19,13 @@ _git clone_
 git clone --branch 1.x https://github.com/emvicy/RouteDB.git RouteDB;
 ~~~
 
-_run emvicy to init module_    
+_run emvicy to init module_
 ~~~
 cd /var/www/html/; \
 php emvicy;
 ~~~
 
-_set Route Class in your config_     
+_set Route Class in your config_
 ~~~php
 /**-----------------------------------------------------------------------------------------------------------------
  * Route Class
@@ -36,10 +36,10 @@ $aConfig['MVC_ROUTE_CLASS'] = '\RouteDB\Model\Route';
 
 ## Usage
 
-**auto-import routes** 
+**auto-import routes**
 
 Once the Route Class is set in your config, all routes are automatically  
-imported once to the database table `RouteDBModelDBTableRoute` on any next request.      
+imported once to the database table `RouteDBModelDBTableRoute` on any next request.
 
 
 
@@ -47,7 +47,7 @@ imported once to the database table `RouteDBModelDBTableRoute` on any next reque
 
 From the moment all routes are imported, all further requests will be resolved by that database table.
 
-**force import** 
+**force import**
 
 if you want to force an import of your current routes settings you can do this by calling the import command on cli:
 
@@ -57,6 +57,25 @@ php emvicy routes:dbimport
 or, shorthand
 ~~~bash
 php emvicy rtdbi
+~~~
+
+---
+
+### using with Policy
+
+**Policy::bindOnRoute**
+
+use Table Route to get proper DTRoute Object
+
+~~~php
+\MVC\Policy::bindOnRoute(
+    // map into DTRoute object
+    \RouteDB\Model\DB\Table\Route::use()->getDTRoute(
+        // get DTRouteDBModelDBTableRoute object
+        \RouteDB\Model\DB\Table\Route::use()->getOnPath($sRoute)
+    ),
+    $aRule
+);
 ~~~
 
 ---

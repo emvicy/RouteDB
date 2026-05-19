@@ -143,21 +143,40 @@ class Route extends Db
     }
 
     /**
+     * returns a DTRouteDBModelDBTableRoute object on a given, defined Route path
      * @param string $sPath
-     * @return \MVC\DataType\DTRoute
+     * @return \RouteDB\DataType\DTRouteDBModelDBTableRoute
      * @throws \ReflectionException
      */
     public function getOnPath(string $sPath = '')
     {
+        /** @var DTRouteDBModelDBTableRoute|false $oDTRouteDBModelDBTableRoute */
         $oDTRouteDBModelDBTableRoute = current($this->retrieve([
             DTDBWhere::create()->set_sKey(DTRouteDBModelDBTableRoute::getPropertyName_path())->set_sValue($sPath),
         ]));
-        (false === $oDTRouteDBModelDBTableRoute) ? $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create() : false;
 
-        $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
-            ->set_methodsAssigned(unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()))
-            ->set_additional(unserialize($oDTRouteDBModelDBTableRoute->get_additional()))
-        ;
+        if (false === $oDTRouteDBModelDBTableRoute)
+        {
+            $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create();
+        }
+
+        return $oDTRouteDBModelDBTableRoute;
+    }
+
+    /**
+     * returns a DTRoute Object on a given DTRouteDBModelDBTableRoute object
+     * @param \RouteDB\DataType\DTRouteDBModelDBTableRoute $oDTRouteDBModelDBTableRoute
+     * @return \MVC\DataType\DTRoute
+     * @throws \ReflectionException
+     */
+    public function getDTRoute(\RouteDB\DataType\DTRouteDBModelDBTableRoute $oDTRouteDBModelDBTableRoute)
+    {
+        $aMethodsAssigned = (false === empty($oDTRouteDBModelDBTableRoute->get_methodsAssigned())) ? unserialize($oDTRouteDBModelDBTableRoute->get_methodsAssigned()) : array();
+        $oAdditional = (false === empty($oDTRouteDBModelDBTableRoute->get_additional())) ? unserialize($oDTRouteDBModelDBTableRoute->get_additional()) : null;
+
+        $oDTRoute = DTRoute::create($oDTRouteDBModelDBTableRoute->set_additional(null)->set_methodsAssigned('')->getPropertyArray())
+            ->set_methodsAssigned($aMethodsAssigned)
+            ->set_additional($oAdditional);
 
         return $oDTRoute;
     }

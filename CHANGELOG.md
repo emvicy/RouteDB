@@ -25,6 +25,8 @@
 
 **added**
 
+- `\RouteDB\Model\DB\Table\Route::getOnPath`: returns a DTRouteDBModelDBTableRoute object on a given, defined Route path
+- `\RouteDB\Model\DB\Table\Route::getDTRoute`: returns a DTRoute Object on a given DTRouteDBModelDBTableRoute object
 - command for emvicy console: `php emvicy routes:dbimport`|`php emvicy rtdbi` => imports Route config into database table `RouteDBModelDBTableRoute` for new.
 - Events
 
