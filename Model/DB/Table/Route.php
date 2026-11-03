@@ -28,7 +28,9 @@ class Route extends Db
         'method'          => "varchar(255) NOT NULL COMMENT ''",
         'classFile'       => "varchar(255) NOT NULL COMMENT ''",
         'additional'      => "text NULL COMMENT ''",
+        'pathParamArray'  => "tinytext NULL COMMENT ''",
         'tag'             => "varchar(255) NULL COMMENT 'Tag'",
+        'DTRoute'         => "text NULL COMMENT ''",
         "description"     => "text NOT NULL DEFAULT '' COMMENT 'Description'",
     );
 

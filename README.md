@@ -25,31 +25,18 @@ cd /var/www/html/; \
 php emvicy;
 ~~~
 
-_set Route Class in your config_
+_set Route Class in your primary module config, e.g. `modules/Foo/etc/config/_mvc.php`_
 ~~~php
-/**-----------------------------------------------------------------------------------------------------------------
- * Route Class
- * it gets called via $GLOBALS['aConfig']['MVC_ROUTE_CLASS']::init();
- */
+//---------------------------------------------------
+// Route Class
 $aConfig['MVC_ROUTE_CLASS'] = '\RouteDB\Model\Route';
 ~~~
 
 ## Usage
 
-**auto-import routes**
-
-Once the Route Class is set in your config, all routes are automatically  
-imported once to the database table `RouteDBModelDBTableRoute` on any next request.
-
-
-
-**resolving**
-
-From the moment all routes are imported, all further requests will be resolved by that database table.
-
 **force import**
 
-if you want to force an import of your current routes settings you can do this by calling the import command on cli:
+force an import of your current routes settings at any time by calling the import command on cli:
 
 ~~~bash
 php emvicy routes:dbimport
@@ -58,6 +45,17 @@ or, shorthand
 ~~~bash
 php emvicy rtdbi
 ~~~
+
+**resolving**
+
+From the moment all routes are imported, all further requests will be resolved by that database table.
+
+[//]: # (**auto-import routes**)
+
+[//]: # ()
+[//]: # (Once the Route Class is set in your config, all routes are automatically  )
+
+[//]: # (imported once to the database table `RouteDBModelDBTableRoute` on any next request.)
 
 ---
 
@@ -81,6 +79,14 @@ use Table Route to get proper DTRoute Object
 ---
 
 ## Events
+
+to activate event listeners, symlink into your primary module event folder
+~~~bash
+cd modules/Foo/etc/event/;
+ln -s /var/www/html/modules/RouteDB/etc/event/routedb.php
+~~~
+
+---
 
 ~~~php
 Event::run('routedb.model.route.init.before', $oDTValue);

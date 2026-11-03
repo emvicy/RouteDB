@@ -150,6 +150,13 @@ class Route extends _ConcreteRoute
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodPath($sRequestMethod, $sPath);
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
+            // take saved request path param array from db:table and write back to current request
+            (false === empty($oDTRouteDBModelDBTableRoute->get_pathParamArray()))
+                ? Request::in()->set_pathParamArray(Convert::unserialize($oDTRouteDBModelDBTableRoute->get_pathParamArray()))
+                : false
+            ;
+
+            // set route
             $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
             Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
 
@@ -160,6 +167,20 @@ class Route extends _ConcreteRoute
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodWildcardPath($sRequestMethod, $sPath . '*');
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
+            // identify and set tail
+            $sTail = substr($sPath, strlen(strtok($oDTRouteDBModelDBTableRoute->get_path(), '*')), strlen($sPath));
+            (false === empty($sTail)) ? Request::in()->set_pathParamArray(['_tail' => $sTail]) : false;
+
+            $oDTRouteDBModelDBTableRouteNew = DTRouteDBModelDBTableRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
+                ->set_id(0)
+                ->set_path($sPath)
+                ->set_additional($oDTRouteDBModelDBTableRoute->get_additional())
+                ->set_tag(strtolower($oDTRouteDBModelDBTableRoute->get_tag() . '-' . $sRequestMethod . '-' . uniqid()))
+                ->set_pathParamArray(Convert::serialize(Request::in()->get_pathParamArray()));
+            // insert for new with requested (resolved) path
+            \RouteDB\Model\DB\Table\Route::use()->create($oDTRouteDBModelDBTableRouteNew);
+
+            // set route
             $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
             Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
 
@@ -167,9 +188,20 @@ class Route extends _ConcreteRoute
         }
 
         // Path Placeholder Match (concrete + Wildcard (/*)); e.g: /RouteDB/bar/:id/:name/ + /RouteDB/bar/:id/:name/*
+        /** @var DTRouteDBModelDBTableRoute $oDTRouteDBModelDBTableRoute */
         $oDTRouteDBModelDBTableRoute = DB::use()->oRouteDBModelDBTableRoute->getOnRequestMethodPlaceholderPath($sRequestMethod, $sPath);
         if (false === empty($oDTRouteDBModelDBTableRoute->get_id()))
         {
+            $oDTRouteDBModelDBTableRouteNew = DTRouteDBModelDBTableRoute::create($oDTRouteDBModelDBTableRoute->getPropertyArray())
+                ->set_id(0)
+                ->set_path($sPath)
+                ->set_additional($oDTRouteDBModelDBTableRoute->get_additional())
+                ->set_tag(strtolower($oDTRouteDBModelDBTableRoute->get_tag() . '-' . $sRequestMethod . '-' . uniqid()))
+                ->set_pathParamArray(Convert::serialize(Request::in()->get_pathParamArray()));
+            // insert for new with requested (resolved) path
+            \RouteDB\Model\DB\Table\Route::use()->create($oDTRouteDBModelDBTableRouteNew);
+
+            // set route
             $oDTRouteDBModelDBTableRoute = self::setRoute($sRegistryKey, $sRequestMethod, $sPath, $oDTRouteDBModelDBTableRoute);
             Event::run('routedb.model.route.getCurrent.after', $oDTRouteDBModelDBTableRoute);
 
@@ -268,7 +300,7 @@ class Route extends _ConcreteRoute
                     DTDBWhere::create()
                         ->set_sKey(DTRouteDBModelDBTableRoute::getPropertyName_id())
                         ->set_sRelation(DTDBWhereRelation::greaterThan)
-                        ->set_sValue(0)
+                        ->set_sValue(0),
                 ]);
             }
 
@@ -286,6 +318,7 @@ class Route extends _ConcreteRoute
                 $oDTRouteDBModelDBTableRoute = DTRouteDBModelDBTableRoute::create($aProperty)
                     ->set_iSlashes(count(explode('/', $oDTRoute->get_path()))-1)
                     ->set_uuid(Strings::uuid4())
+                    ->set_DTRoute(Convert::serialize($oDTRoute))
                     ->set_stampCreate(date('Y-m-d H:i:s'))
                     ->set_stampChange(date('Y-m-d H:i:s'))
                 ;
@@ -480,6 +513,74 @@ class Route extends _ConcreteRoute
         return $aDTRoute;
     }
 
+    public static function get_aRoute()
+    {
+        /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
+        $aDTRouteDBModelDBTableRoute = \RouteDB\Model\DB\Table\Route::use()->retrieve();
+        $aRoute = array();
+
+        foreach ($aDTRouteDBModelDBTableRoute as $oDTRouteDBModelDBTableRoute)
+        {
+            $aRoute[$oDTRouteDBModelDBTableRoute->get_path()] = Convert::unserialize($oDTRouteDBModelDBTableRoute->get_DTRoute());
+        }
+
+        return $aRoute;
+    }
+
+    /**
+     * @return array
+     */
+    public static function get_aMethod()
+    {
+        return self::$aMethod;
+    }
+
+    /**
+     * @return array
+     * @throws \ReflectionException
+     */
+    public static function get_aMethodRoute()
+    {
+        /** @var DTRouteDBModelDBTableRoute[] $aDTRouteDBModelDBTableRoute */
+        $aDTRouteDBModelDBTableRoute = \RouteDB\Model\DB\Table\Route::use()->retrieve();
+        $aMethodRoute = array();
+
+        foreach ($aDTRouteDBModelDBTableRoute as $oDTRouteDBModelDBTableRoute)
+        {
+            $aMethodRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()][$oDTRouteDBModelDBTableRoute->get_path()] = Convert::unserialize($oDTRouteDBModelDBTableRoute->get_DTRoute());
+            $aMethodRoute[$oDTRouteDBModelDBTableRoute->get_requestMethod()][$oDTRouteDBModelDBTableRoute->get_path()]->set_tag($oDTRouteDBModelDBTableRoute->get_tag());
+        }
+
+        return $aMethodRoute;
+    }
+
+    /**
+     * @param array $aRoute
+     * @return void
+     */
+    public static function set_aRoute(array $aRoute = array())
+    {
+        self::$aRoute = $aRoute;
+    }
+
+    /**
+     * @param array $aMethod
+     * @return void
+     */
+    public static function set_aMethod(array $aMethod = array())
+    {
+        self::$aMethod = $aMethod;
+    }
+
+    /**
+     * @param array $aMethodRoute
+     * @return void
+     */
+    public static function set_aMethodRoute(array $aMethodRoute = array())
+    {
+        self::$aMethodRoute = $aMethodRoute;
+    }
+
     /*
      * Es folgen Methoden, welche noch nicht umgesetzt sind.
      * Es werden dann die Methoden verwendet von: \MVC\_ConcreteRoute
@@ -529,6 +630,7 @@ class Route extends _ConcreteRoute
 //    {
 //        // TODO: Implement add() method.
 //    }
+//----------------------------------------------------------------------------------------------------------------------
 //    public static function getRouteIndexArrayOnKey(string $sKey = 'query', string $sValue = ''): array
 //    {
 //        // TODO: Implement getRouteIndexArrayOnKey() method.

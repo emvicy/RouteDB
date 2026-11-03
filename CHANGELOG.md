@@ -7,7 +7,15 @@
 ---
 
 **added**
-**changed**    
+**changed**   
+
+- `\RouteDB\Model\Route::autoImportIntoDatabase`
+- `\RouteDB\Model\Route::getCurrent`
+- `\RouteDB\Model\Route::handleFallback`
+- `etc/event/routedb.php`: log file renamed to `routedb.log`
+- `Model/DB/Table/Route.php`: +Field `'pathParamArray'  => "tinytext NULL COMMENT ''",`
+- `DataType/DTRouteDBModelDBTableRoute.php`
+
 **deprecated**
 **removed**  
 **fixed**  
