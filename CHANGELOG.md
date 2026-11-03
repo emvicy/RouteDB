@@ -1,28 +1,5 @@
 # Changelog
 
-- All notable changes to this project will be documented in this file.
-- The format is based on [Keep a Changelog](https://keepachangelog.com/de/1.0.0/)
-- This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
----
-
-**added**
-**changed**   
-
-- `\RouteDB\Model\Route::autoImportIntoDatabase`
-- `\RouteDB\Model\Route::getCurrent`
-- `\RouteDB\Model\Route::handleFallback`
-- `etc/event/routedb.php`: log file renamed to `routedb.log`
-- `Model/DB/Table/Route.php`: +Field `'pathParamArray'  => "tinytext NULL COMMENT ''",`
-- `DataType/DTRouteDBModelDBTableRoute.php`
-
-**deprecated**
-**removed**  
-**fixed**  
-**security**
-
----
-
 ## [Unreleased]
 
 ### Backlog
@@ -39,6 +16,14 @@
 - Events
 
 **changed**
+
+- `\RouteDB\Model\Route::autoImportIntoDatabase`
+- `\RouteDB\Model\Route::getCurrent`
+- `\RouteDB\Model\Route::handleFallback`
+- `etc/event/routedb.php`: log file renamed to `routedb.log`
+- `Model/DB/Table/Route.php`: +Field `'pathParamArray'  => "tinytext NULL COMMENT ''",`
+- `DataType/DTRouteDBModelDBTableRoute.php`
+
 **deprecated**
 **removed**  
 **fixed**  
@@ -48,7 +33,25 @@
 
 ## [Releases]
 
-### [1.0] - 2025-04-20, https://github.com/emvicy/RouteDB/releases/tag/1.0
+### [1.0] - 2026-11-03, https://github.com/emvicy/RouteDB/releases/tag/1.0
+
+**added**
+
+- `\RouteDB\Model\DB\Table\Route::getOnPath`: returns a DTRouteDBModelDBTableRoute object on a given, defined Route path
+- `\RouteDB\Model\DB\Table\Route::getDTRoute`: returns a DTRoute Object on a given DTRouteDBModelDBTableRoute object
+- command for emvicy console: `php emvicy routes:dbimport`|`php emvicy rtdbi` => imports Route config into database table `RouteDBModelDBTableRoute` for new.
+- Events
+
+**changed**
+
+- `\RouteDB\Model\Route::autoImportIntoDatabase`
+- `\RouteDB\Model\Route::getCurrent`
+- `\RouteDB\Model\Route::handleFallback`
+- `etc/event/routedb.php`: log file renamed to `routedb.log`
+- `Model/DB/Table/Route.php`: +Field `'pathParamArray'  => "tinytext NULL COMMENT ''",`
+- `DataType/DTRouteDBModelDBTableRoute.php`
+
+### [PRE] - 2025-04-20
 
 - first Release
 
